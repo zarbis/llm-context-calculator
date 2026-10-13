@@ -27,7 +27,7 @@ styles.css   # dark theme
   (16 GB, 960 GB/s).
 - **Overheads**:
   - Model runtime (GB) — auto-estimated on import/selection via
-    `estimateRuntimeOverhead`: ≤4B → 0.6, ≤9B → 0.85, ≤15B → 1.1, ≤40B → 1.4,
+    `estimateRuntimeOverhead`: ≤4B → 0.6, ≤9B → 0.85, ≤15B → 1.1, ≤27B → 1.3, ≤40B → 1.4,
     >40B → 1.75. Manually overridable.
   - Desktop / other apps (GB) — manual, default 0.
 - **HF Import**: model repo search (`/api/models?search=`), specs

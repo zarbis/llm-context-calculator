@@ -304,6 +304,7 @@
     if (typeof obj.vram === 'number') el.vram.value = String(obj.vram);
     if (typeof obj.bw === 'number')   el.bandwidth.value = String(obj.bw);
     if (typeof obj.dsk === 'number')  el.desktop.value = String(obj.dsk);
+    if (typeof obj.rt === 'number')  el.runtime.value = String(obj.rt);
 
     if (obj.hf) {
       el.hfId.value = obj.hf;
@@ -407,6 +408,7 @@
     if (params <= 4)  return 0.6;
     if (params <= 9)  return 0.85;
     if (params <= 15) return 1.1;
+    if (params <= 27) return 1.3;
     if (params <= 40) return 1.4;
     return 1.75;
   }
@@ -707,7 +709,7 @@
   /** Tooltip for the runtime overhead field — explains the auto-fill on import/selection. */
   function runtimeTipHtml() {
     return '<div class="speech-bubble-title">Model runtime (GB)</div>' +
-           '<div class="speech-bubble-note">Auto-filled when a model is imported or selected in the dropdown. Scales with model size: ≤4B → 0.6, ≤9B → 0.85, ≤15B → 1.1, ≤40B → 1.4, &gt;40B → 1.75. You can override it manually.</div>';
+           '<div class="speech-bubble-note">Auto-filled when a model is imported or selected in the dropdown. Scales with model size: ≤4B → 0.6, ≤9B → 0.85, ≤15B → 1.1, ≤27B → 1.3, ≤40B → 1.4, &gt;40B → 1.75. You can override it manually.</div>';
   }
 
   // ─── KV cache bar chart ──────────────────────────────────────────────────────
@@ -914,16 +916,6 @@
     el.decodeSpeed.textContent = '–';
     el.maxContext.textContent  = '–';
     state = null;
-    selectedKvType = 'f16';
-    selectedKType = 'f16';
-    selectedVType = 'f16';
-    asymmetricMode = false;
-    el.asymToggle.checked = false;
-    // Re-activate all size buttons for next use
-    document.querySelectorAll('.kv-size-btn').forEach(function (btn) {
-      btn.classList.add('kv-size-btn-active');
-      btn.setAttribute('aria-pressed', 'true');
-    });
     renderVramBar(0, 0, 0, 0, 0, 0, 0);
     renderKvChart(0, 0, null, null, null);
     setKvChartTitle();
@@ -961,6 +953,9 @@
    */
   function parseQuantTag(path) {
     var base = path.replace(/\.gguf$/, '');
+    // Strip multi-part suffix (e.g. "-0000-of-0002") so the quant
+    // is the segment before it, not the part number.
+    base = base.replace(/-\d{4}-of-\d{4}$/i, '');
     var parts = base.split('-');
     var last = parts[parts.length - 1];
     if (last.toLowerCase() === 'mtp' && parts.length >= 2) {
