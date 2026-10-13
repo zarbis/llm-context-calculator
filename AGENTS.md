@@ -22,9 +22,13 @@ styles.css   # dark theme
 
 ## Inputs
 
-- **Hardware**: GPU `<select>` (`GPU_LIST`) auto-fills Total VRAM (GB) and
+- **Hardware**: GPU dropdown (`GPU_LIST`) auto-fills Total VRAM (GB) and
   Bandwidth (GB/s); both remain manually editable. Default: RTX 5080
-  (16 GB, 960 GB/s).
+  (16 GB, 960 GB/s). Supports NVIDIA RTX, AMD RX, Intel Arc, and Apple
+  Silicon Macs (M1–M4). On Apple Macs, "Total VRAM" is the unified
+  system memory (total RAM), since CPU and GPU share memory. The dropdown
+  is a custom `<div>`-based component (not a native `<select>`) with
+  full-width CSS category separators (NVIDIA, AMD, Intel, Apple).
 - **Overheads**:
   - Model runtime (GB) — auto-estimated on import/selection via
     `estimateRuntimeOverhead`: ≤4B → 0.6, ≤9B → 0.85, ≤15B → 1.1, ≤27B → 1.3, ≤40B → 1.4,
@@ -130,7 +134,8 @@ the normal import error shows.
 - `formatDecimal` on blur ensures ≥ 1 decimal place for the vram /
   runtime / desktop fields.
 - Help circles (`#helpVram`, `#helpDesktop`, `#helpRuntime`) show
-  `nvidia-smi` commands in the shared speech bubble, with a 📋
+  platform-aware commands in the shared speech bubble: `nvidia-smi` for
+  NVIDIA/AMD/Intel, `system_profiler` / `top` for Apple Silicon. With a 📋
   copy-to-clipboard button (Clipboard API with `execCommand` fallback for
   `file://`).
 - `KNOWN_ARCHS` families: qwen3, qwen2.5, llama, mistral, gemma, phi,

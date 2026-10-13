@@ -20,7 +20,13 @@
       <h2>Hardware</h2>
       <div class="field">
         <label for="gpuSelect">GPU</label>
-        <select id="gpuSelect"></select>
+        <div class="gpu-select" id="gpuSelect" data-value="RTX 5080">
+          <button type="button" class="gpu-select-trigger" aria-haspopup="listbox" aria-label="Select GPU">
+            <span class="gpu-select-value">RTX 5080 — 16 GB, 960 GB/s</span>
+            <span class="gpu-select-arrow">▾</span>
+          </button>
+          <div class="gpu-select-dropdown" role="listbox" hidden></div>
+        </div>
       </div>
       <div class="grid">
         <div class="field">
@@ -55,7 +61,7 @@
           <input type="number" id="desktop" value="0" min="0" step="0.1">
         </div>
       </div>
-      <p class="hint">Model runtime covers the inference context, memory allocator and other runtime overhead. Desktop covers VRAM already in use by the OS, browser tabs, games, etc.</p>
+      <p class="hint">Model runtime covers the inference context, memory allocator and other runtime overhead. Desktop covers VRAM already in use by the OS, browser tabs, games, etc. On Apple Macs, "Total VRAM" is the unified system memory (total RAM).</p>
     </section>
 
     <section class="card">

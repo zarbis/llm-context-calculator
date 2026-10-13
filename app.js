@@ -28,37 +28,50 @@
   ];
 
   const GPU_LIST = [
-    { name: 'RTX 5090',      vram: 32, bandwidth: 1792  },
-    { name: 'RTX 5080',      vram: 16, bandwidth: 960   },
-    { name: 'RTX 5070 Ti',   vram: 16, bandwidth: 896   },
-    { name: 'RTX 5070',      vram: 12, bandwidth: 672   },
-    { name: 'RTX 5060 Ti',   vram: 16, bandwidth: 896   },
-    { name: 'RTX 5060 Ti 8G',vram: 8,  bandwidth: 576   },
-    { name: 'RTX 4090',      vram: 24, bandwidth: 1008  },
-    { name: 'RTX 4080',      vram: 16, bandwidth: 716.8 },
-    { name: 'RTX 4070 Ti',   vram: 16, bandwidth: 548   },
-    { name: 'RTX 4070',      vram: 12, bandwidth: 448   },
-    { name: 'RTX 4060 Ti',   vram: 16, bandwidth: 288   },
-    { name: 'RTX 4060',      vram: 8,  bandwidth: 272   },
-    { name: 'RTX 3090',      vram: 24, bandwidth: 936   },
-    { name: 'RTX 3080 Ti',   vram: 12, bandwidth: 912   },
-    { name: 'RTX 3080',      vram: 10, bandwidth: 912   },
-    { name: 'RTX 3070 Ti',   vram: 8,  bandwidth: 760   },
-    { name: 'RTX 3070',      vram: 8,  bandwidth: 760   },
-    { name: 'RTX 3060',      vram: 12, bandwidth: 360   },
-    { name: 'RTX 2080 Ti',   vram: 11, bandwidth: 448   },
-    { name: 'RTX 2080',      vram: 11, bandwidth: 448   },
-    { name: 'RTX 2070',      vram: 8,  bandwidth: 448   },
-    { name: 'RX 7900 XTX',   vram: 24, bandwidth: 819.2 },
-    { name: 'RX 7900 XT',    vram: 20, bandwidth: 819.2 },
-    { name: 'RX 7900',       vram: 20, bandwidth: 819.2 },
-    { name: 'RX 7800 XT',    vram: 16, bandwidth: 632   },
-    { name: 'RX 7700 XT',    vram: 12, bandwidth: 548   },
-    { name: 'RX 6900 XT',    vram: 16, bandwidth: 512   },
-    { name: 'RX 6800 XT',    vram: 16, bandwidth: 512   },
-    { name: 'RX 6700 XT',    vram: 12, bandwidth: 384   },
-    { name: 'Arc A770',      vram: 16, bandwidth: 448   },
-    { name: 'Arc A750',      vram: 8,  bandwidth: 448   },
+    { name: 'RTX 5090',      vram: 32, bandwidth: 1792,  cat: 'NVIDIA' },
+    { name: 'RTX 5080',      vram: 16, bandwidth: 960,   cat: 'NVIDIA' },
+    { name: 'RTX 5070 Ti',   vram: 16, bandwidth: 896,   cat: 'NVIDIA' },
+    { name: 'RTX 5070',      vram: 12, bandwidth: 672,   cat: 'NVIDIA' },
+    { name: 'RTX 5060 Ti',   vram: 16, bandwidth: 896,   cat: 'NVIDIA' },
+    { name: 'RTX 5060 Ti 8G',vram: 8,  bandwidth: 576,   cat: 'NVIDIA' },
+    { name: 'RTX 4090',      vram: 24, bandwidth: 1008,  cat: 'NVIDIA' },
+    { name: 'RTX 4080',      vram: 16, bandwidth: 716.8, cat: 'NVIDIA' },
+    { name: 'RTX 4070 Ti',   vram: 16, bandwidth: 548,   cat: 'NVIDIA' },
+    { name: 'RTX 4070',      vram: 12, bandwidth: 448,   cat: 'NVIDIA' },
+    { name: 'RTX 4060 Ti',   vram: 16, bandwidth: 288,   cat: 'NVIDIA' },
+    { name: 'RTX 4060',      vram: 8,  bandwidth: 272,   cat: 'NVIDIA' },
+    { name: 'RTX 3090',      vram: 24, bandwidth: 936,   cat: 'NVIDIA' },
+    { name: 'RTX 3080 Ti',   vram: 12, bandwidth: 912,   cat: 'NVIDIA' },
+    { name: 'RTX 3080',      vram: 10, bandwidth: 912,   cat: 'NVIDIA' },
+    { name: 'RTX 3070 Ti',   vram: 8,  bandwidth: 760,   cat: 'NVIDIA' },
+    { name: 'RTX 3070',      vram: 8,  bandwidth: 760,   cat: 'NVIDIA' },
+    { name: 'RTX 3060',      vram: 12, bandwidth: 360,   cat: 'NVIDIA' },
+    { name: 'RTX 2080 Ti',   vram: 11, bandwidth: 448,   cat: 'NVIDIA' },
+    { name: 'RTX 2080',      vram: 11, bandwidth: 448,   cat: 'NVIDIA' },
+    { name: 'RTX 2070',      vram: 8,  bandwidth: 448,   cat: 'NVIDIA' },
+    { name: 'RX 7900 XTX',   vram: 24, bandwidth: 819.2, cat: 'AMD' },
+    { name: 'RX 7900 XT',    vram: 20, bandwidth: 819.2, cat: 'AMD' },
+    { name: 'RX 7900',       vram: 20, bandwidth: 819.2, cat: 'AMD' },
+    { name: 'RX 7800 XT',    vram: 16, bandwidth: 632,   cat: 'AMD' },
+    { name: 'RX 7700 XT',    vram: 12, bandwidth: 548,   cat: 'AMD' },
+    { name: 'RX 6900 XT',    vram: 16, bandwidth: 512,   cat: 'AMD' },
+    { name: 'RX 6800 XT',    vram: 16, bandwidth: 512,   cat: 'AMD' },
+    { name: 'RX 6700 XT',    vram: 12, bandwidth: 384,   cat: 'AMD' },
+    { name: 'Arc A770',      vram: 16, bandwidth: 448,   cat: 'Intel' },
+    { name: 'Arc A750',      vram: 8,  bandwidth: 448,   cat: 'Intel' },
+    // Apple Silicon (unified memory: VRAM = total system RAM)
+    { name: 'M4 Max',       vram: 32, bandwidth: 546,   cat: 'Apple' },
+    { name: 'M4 Pro',       vram: 24, bandwidth: 273,   cat: 'Apple' },
+    { name: 'M4',           vram: 16, bandwidth: 120,   cat: 'Apple' },
+    { name: 'M3 Max',       vram: 36, bandwidth: 400,   cat: 'Apple' },
+    { name: 'M3 Pro',       vram: 18, bandwidth: 190,   cat: 'Apple' },
+    { name: 'M3',           vram: 8,  bandwidth: 100,   cat: 'Apple' },
+    { name: 'M2 Max',       vram: 32, bandwidth: 400,   cat: 'Apple' },
+    { name: 'M2 Pro',       vram: 16, bandwidth: 240,   cat: 'Apple' },
+    { name: 'M2',           vram: 8,  bandwidth: 100,   cat: 'Apple' },
+    { name: 'M1 Max',       vram: 32, bandwidth: 400,   cat: 'Apple' },
+    { name: 'M1 Pro',       vram: 16, bandwidth: 120,   cat: 'Apple' },
+    { name: 'M1',           vram: 8,  bandwidth: 68.25, cat: 'Apple' },
   ];
 
   // Known-architecture lookup: families of common open-weight models, used as a
@@ -328,17 +341,55 @@
 
   function populateGpuDropdown() {
     var select = el.gpuSelect;
-    select.innerHTML = '';
+    var dropdown = select.querySelector('.gpu-select-dropdown');
+    dropdown.innerHTML = '';
+    var currentCat = null;
     GPU_LIST.forEach(function (g) {
-      var opt = document.createElement('option');
-      opt.value = g.name;
+      if (g.cat !== currentCat) {
+        currentCat = g.cat;
+        var group = document.createElement('div');
+        group.className = 'gpu-select-group';
+        group.textContent = g.cat;
+        dropdown.appendChild(group);
+      }
+      var opt = document.createElement('div');
+      opt.className = 'gpu-select-option';
       opt.textContent = g.name + ' — ' + g.vram + ' GB, ' + g.bandwidth + ' GB/s';
-      select.appendChild(opt);
+      opt.dataset.value = g.name;
+      opt.addEventListener('click', function () {
+        gpuSelectValue(g.name);
+      });
+      dropdown.appendChild(opt);
     });
     select.value = 'RTX 5080';
     el.vram.value = '16.0';
     el.bandwidth.value = '960';
   }
+
+  /** Set the GPU dropdown value, update the trigger text, and highlight the active option. */
+  function gpuSelectValue(name) {
+    var select = el.gpuSelect;
+    select.dataset.value = name;
+    var g = GPU_LIST.find(function (x) { return x.name === name; });
+    select.querySelector('.gpu-select-value').textContent = g
+      ? g.name + ' — ' + g.vram + ' GB, ' + g.bandwidth + ' GB/s'
+      : name;
+    select.querySelectorAll('.gpu-select-option').forEach(function (o) {
+      o.classList.toggle('gpu-select-option-active', o.dataset.value === name);
+    });
+    select.querySelector('.gpu-select-dropdown').hidden = true;
+    if (g) {
+      el.vram.value = g.vram.toFixed(1);
+      el.bandwidth.value = String(g.bandwidth);
+      compute();
+    }
+  }
+
+  // Define a `value` property on the gpuSelect element for backward compatibility.
+  Object.defineProperty(el.gpuSelect, 'value', {
+    get: function () { return this.dataset.value; },
+    set: function (val) { gpuSelectValue(val); }
+  });
 
   // ─── Populate dropdowns ──────────────────────────────────────────────────────
 
@@ -666,6 +717,12 @@
     desktop: "nvidia-smi --query-gpu=memory.used  --format=csv,noheader | awk '{v=$1/1024; s=sprintf(\"%.2f\",v); sub(/0+$/,\"\",s); sub(/\\.$/,\"\",s); print s}'",
   };
 
+  // macOS equivalents (Apple Silicon unified memory)
+  var HELP_CMDS_MACOS = {
+    vram:    "system_profiler SPHardwareDataType | grep 'Memory'",
+    desktop: "top -l 1 | grep 'Mem:'",
+  };
+
   /** Show the shared speech-bubble tooltip above the anchor, zero delay. */
   function showTip(html, anchor) {
     el.speechTip.innerHTML = html;
@@ -693,14 +750,26 @@
            '<div class="speech-bubble-line">' + fmtGB(parseFloat(s.dataset.gb)) + ' (' + parseFloat(s.dataset.pct).toFixed(1) + '%)</div>';
   }
 
+  /** Check if the selected GPU is an Apple Silicon Mac. */
+  function isAppleSilicon() {
+    var name = el.gpuSelect.value;
+    return /^M[1234]/.test(name);
+  }
+
   function helpTipHtml(kind) {
-    var title = kind === 'vram' ? 'Total VRAM (GB)' : 'Desktop / other apps (GB)';
+    var macos = isAppleSilicon();
+    var cmds = macos ? HELP_CMDS_MACOS : HELP_CMDS;
+    var title = kind === 'vram' ? (macos ? 'Total memory (GB) — Apple unified RAM' : 'Total VRAM (GB)') : 'Desktop / other apps (GB)';
     var note = kind === 'vram'
-      ? 'Run this and paste the printed GB value into the field.'
-      : 'Stop any running models before measuring, then run this and paste the printed GB value into the field.';
+      ? (macos
+        ? 'Run this and paste the printed GB value into the field. On Apple Macs, Total VRAM is the unified system memory.'
+        : 'Run this and paste the printed GB value into the field.')
+      : (macos
+        ? 'Stop any running models before measuring, then run this and paste the printed GB value into the field.'
+        : 'Stop any running models before measuring, then run this and paste the printed GB value into the field.');
     return '<div class="speech-bubble-title">' + title + '</div>' +
            '<div class="speech-bubble-cmd-wrap">' +
-           '<code class="speech-bubble-cmd">' + HELP_CMDS[kind] + '</code>' +
+           '<code class="speech-bubble-cmd">' + cmds[kind] + '</code>' +
            '<button class="copy-btn" aria-label="Copy command"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="8" height="8" rx="1"/><path d="M2 10 L2 2 L10 2 L10 6 M2 10 L6 10"/></svg></button>' +
            '</div>' +
            '<div class="speech-bubble-note">' + note + '</div>';
@@ -1196,12 +1265,38 @@
       showShareStatus('Link copied.');
     });
 
-    el.gpuSelect.addEventListener('change', function () {
-      var g = GPU_LIST.find(function (x) { return x.name === el.gpuSelect.value; });
-      if (g) {
-        el.vram.value = g.vram.toFixed(1);
-        el.bandwidth.value = String(g.bandwidth);
-        compute();
+    // GPU dropdown: click to toggle, click outside to close, keyboard navigation.
+    var gpuTrigger = el.gpuSelect.querySelector('.gpu-select-trigger');
+    var gpuDropdown = el.gpuSelect.querySelector('.gpu-select-dropdown');
+    gpuTrigger.addEventListener('click', function () {
+      gpuDropdown.hidden = !gpuDropdown.hidden;
+    });
+    document.addEventListener('click', function (e) {
+      if (!el.gpuSelect.contains(e.target)) {
+        gpuDropdown.hidden = true;
+      }
+    });
+    gpuTrigger.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === 'Escape') {
+        e.preventDefault();
+        if (e.key === 'Escape') {
+          gpuDropdown.hidden = true;
+          return;
+        }
+        if (gpuDropdown.hidden) {
+          gpuDropdown.hidden = false;
+        }
+        var options = Array.prototype.slice.call(gpuDropdown.querySelectorAll('.gpu-select-option'));
+        if (!options.length) return;
+        var idx = options.findIndex(function (o) { return o.classList.contains('gpu-select-option-active'); });
+        if (e.key === 'ArrowDown') {
+          idx = (idx + 1) % options.length;
+        } else if (e.key === 'ArrowUp') {
+          idx = (idx - 1 + options.length) % options.length;
+        } else {
+          return;
+        }
+        gpuSelectValue(options[idx].dataset.value);
       }
     });
 
@@ -1260,7 +1355,10 @@
       setTimeout(function () { btn.innerHTML = originalHtml; }, 1000);
     });
 
-    window.addEventListener('scroll', hideTip);
+    window.addEventListener('scroll', function () {
+      hideTip();
+      el.gpuSelect.querySelector('.gpu-select-dropdown').hidden = true;
+    });
 
     // Generate the single row of cache-size buttons
     KV_CACHE_TYPES.forEach(function (t) {
