@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM Context Calculator</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app">
+    <header class="app-header">
+      <h1>LLM Context Calculator</h1>
+      <p class="subtitle">Estimate the maximum context window for llama.cpp running a local model on your GPU(s).</p>
+    </header>
+
+    <div class="columns">
+    <div class="col-left">
+
+    <section class="card">
+      <h2>Hardware</h2>
+      <div class="field">
+        <label for="gpuSelect">GPU</label>
+        <select id="gpuSelect"></select>
+      </div>
+      <div class="grid">
+        <div class="field">
+          <div class="label-row">
+            <label for="vram">Total VRAM (GB)</label>
+            <button type="button" class="help-circle" id="helpVram" aria-label="How to read total VRAM with nvidia-smi">?</button>
+          </div>
+          <input type="number" id="vram" value="16" min="0" step="0.5">
+        </div>
+        <div class="field">
+          <label for="bandwidth">Bandwidth (GB/s)</label>
+          <input type="number" id="bandwidth" value="960" min="0" step="1">
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Overheads</h2>
+      <div class="grid">
+        <div class="field">
+          <div class="label-row">
+            <label for="runtime">Model runtime (GB)</label>
+            <button type="button" class="help-circle" id="helpRuntime" aria-label="How the runtime overhead is auto-filled after model import">?</button>
+          </div>
+          <input type="number" id="runtime" value="1.0" min="0" step="0.1">
+        </div>
+        <div class="field">
+          <div class="label-row">
+            <label for="desktop">Desktop / other apps (GB)</label>
+            <button type="button" class="help-circle" id="helpDesktop" aria-label="How to read VRAM used by desktop apps with nvidia-smi">?</button>
+          </div>
+          <input type="number" id="desktop" value="0" min="0" step="0.1">
+        </div>
+      </div>
+      <p class="hint">Model runtime covers the inference context, memory allocator and other runtime overhead. Desktop covers VRAM already in use by the OS, browser tabs, games, etc.</p>
+    </section>
+
+    <section class="card">
+      <h2>Import from Hugging Face</h2>
+      <div class="field">
+        <label for="hfId">Hugging Face model repository</label>
+        <input type="text" id="hfId" placeholder="e.g. unsloth/Qwen3.8-27B-GGUF" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="hfToken">Access token <span class="optional">(optional — gated models)</span></label>
+        <input type="password" id="hfToken" placeholder="hf_…" autocomplete="off">
+      </div>
+      <div class="field">
+        <button type="button" id="hfImportBtn" class="btn">Import model</button>
+      </div>
+      <p class="hint">Imports the model and its available GGUF quant variants into the dropdowns below. Click a bar in the chart below to apply a quant. Needs a network connection.</p>
+      <p class="import-status" id="ggufStatus" hidden></p>
+      <div class="grid">
+        <div class="field">
+          <label for="modelPreset">Model name</label>
+          <select id="modelPreset"></select>
+        </div>
+        <div class="field">
+          <label for="weightQuant">Weight quant</label>
+          <select id="weightQuant"></select>
+        </div>
+      </div>
+    </section>
+
+    </div>
+    <div class="col-right">
+
+    <section class="card">
+      <h2>VRAM allocation</h2>
+      <div class="vram-bar" aria-hidden="true">
+        <div class="vram-seg vram-seg-desktop" id="segDesktop"><span class="vram-seg-label"></span></div>
+        <div class="vram-seg vram-seg-runtime" id="segRuntime"><span class="vram-seg-label"></span></div>
+        <div class="vram-seg vram-seg-weights" id="segWeights"><span class="vram-seg-label"></span></div>
+        <div class="vram-seg vram-seg-mtp"     id="segMTP"><span class="vram-seg-label"></span></div>
+        <div class="vram-seg vram-seg-kv"      id="segKV"><span class="vram-seg-label"></span></div>
+        <div class="vram-seg vram-seg-free"   id="segFree"><span class="vram-seg-label"></span></div>
+      </div>
+      <div class="vram-legend">
+        <div class="legend-item">
+          <span class="swatch swatch-desktop"></span>
+          <span class="legend-label">Desktop / other</span>
+          <span class="legend-value" id="desktopGB">–</span>
+        </div>
+        <div class="legend-item">
+          <span class="swatch swatch-runtime"></span>
+          <span class="legend-label">Model runtime</span>
+          <span class="legend-value" id="runtimeGB">–</span>
+        </div>
+        <div class="legend-item">
+          <span class="swatch swatch-weights"></span>
+          <span class="legend-label">Model weights</span>
+          <span class="legend-value" id="weightsGB">–</span>
+        </div>
+        <div class="legend-item">
+          <span class="swatch swatch-mtp"></span>
+          <span class="legend-label">MTP head</span>
+          <span class="legend-value" id="mtpGB">–</span>
+        </div>
+        <div class="legend-item">
+          <span class="swatch swatch-kv"></span>
+          <span class="legend-label">KV cache (context)</span>
+          <span class="legend-value" id="kvGB">–</span>
+        </div>
+        <div class="legend-item">
+          <span class="swatch swatch-free"></span>
+          <span class="legend-label">Free</span>
+          <span class="legend-value" id="freeGB">–</span>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat">
+          <span class="stat-label">Decode speed</span>
+          <span class="stat-value" id="decodeSpeed">–</span>
+        </div>
+        <div class="stat stat-highlight">
+          <span class="stat-label">Max context</span>
+          <span class="stat-value" id="maxContext">–</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Cost of 1K context window</span>
+          <span class="stat-value" id="kvPerToken">–</span>
+        </div>
+      </div>
+      <p class="warning" id="warning" hidden></p>
+      <div class="slider-labels">
+        <span>All VRAM · 0 context</span>
+        <span>Max context · 0 headroom</span>
+      </div>
+      <input type="range" id="ctxSlider" min="0" max="100" value="100" step="1" disabled>
+      <div class="readout">
+        <div class="readout-item">
+          <span>Context</span>
+          <strong id="ctxReadout">0 tokens</strong>
+        </div>
+        <div class="readout-item">
+          <span>Headroom</span>
+          <strong id="headroomReadout">0.00 GB</strong>
+        </div>
+        <div class="readout-item">
+          <span>≈ Words</span>
+          <strong id="wordsReadout">0</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 id="kvChartTitle">No model imported</h2>
+      <p class="hint" id="kvChartHint">Import a model to see its quant variants.</p>
+      <div class="kv-asym-toggle-row">
+        <label class="kv-toggle">
+          <input type="checkbox" id="asymToggle">
+          <span class="kv-toggle-track"></span>
+          <span class="kv-toggle-label">Asymmetric K/V cache sizes</span>
+        </label>
+      </div>
+      <div class="kv-check-sizes" id="kvCheckSizes">
+        <span class="kv-check-label">Cache sizes:</span>
+      </div>
+      <div class="kv-chart" id="kvChart"></div>
+    </section>
+    </div>
+    </div>
+
+    <footer class="app-footer">
+      <p>Estimates only — actual usage varies with model, quant, batch size and system. Everything runs in your browser; the import step queries Hugging Face (your token is only sent to huggingface.co).</p>
+    </footer>
+  </main>
+  <div id="speechTip" class="speech-bubble" hidden></div>
+  <script src="app.js"></script>
+</body>
+</html>
