@@ -158,6 +158,8 @@
     helpDesktop: $('helpDesktop'),
     helpRuntime: $('helpRuntime'),
     speechTip:   $('speechTip'),
+    shareBtn:    $('shareBtn'),
+    shareStatus: $('shareStatus'),
   };
 
   // ─── State ───────────────────────────────────────────────────────────────────
@@ -214,6 +216,111 @@
         node.value = val.toFixed(1);
       }
     }
+  }
+
+  // ─── Share link ─────────────────────────────────────────────────────────────────
+
+  /** Encode a string as a URL-safe base64 (no padding, -/_ instead of +/). */
+  function toBase64Url(str) {
+    var bytes = unescape(encodeURIComponent(str));
+    var b64 = btoa(bytes);
+    return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  /** Decode a URL-safe base64 string back to the original. */
+  function fromBase64Url(b64) {
+    var s = b64.replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    return decodeURIComponent(escape(atob(s)));
+  }
+
+  /** Copy text to the clipboard (Clipboard API with execCommand fallback for file://). */
+  function copyText(text) {
+    var copied = false;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text);
+        copied = true;
+      }
+    } catch (err) { /* clipboard API unavailable (e.g. file://) */ }
+    if (!copied) {
+      var ta = document.createElement('textarea');
+      ta.style.position = 'absolute';
+      ta.style.left = '-9999px';
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    return copied;
+  }
+
+  /** Build a shareable URL encoding the current inputs as ?s=<base64url JSON>. */
+  function buildShareUrl() {
+    var obj = {
+      gpu: el.gpuSelect.value,
+      vram: +el.vram.value,
+      bw:   +el.bandwidth.value,
+      rt:   +el.runtime.value,
+      dsk:  +el.desktop.value,
+      hf:   el.modelPreset.value,
+      q:    el.weightQuant.value,
+      kv:   selectedKvType,
+      asym: asymmetricMode ? 1 : 0,
+      k:    selectedKType,
+      v:    selectedVType
+    };
+    var payload = toBase64Url(JSON.stringify(obj));
+    var base = location.href.split('#')[0].replace(/\?.*$/, '');
+    var sep = base.indexOf('?') === -1 ? '?' : '&';
+    return base + sep + 's=' + payload;
+  }
+
+  /** Show the share-status line next to the Share button. */
+  function showShareStatus(msg, persist) {
+    el.shareStatus.textContent = msg;
+    el.shareStatus.hidden = false;
+    if (persist) return;
+    setTimeout(function () { el.shareStatus.hidden = true; }, 2500);
+  }
+
+  /**
+   * Restore pre-filled values from a ?s= share link (applied on page load).
+   * Returns true if an async model import was kicked off; false otherwise.
+   */
+  function restoreFromUrl() {
+    var params;
+    try { params = new URLSearchParams(location.search); } catch (e) { return false; }
+    var s = params.get('s');
+    if (!s) return false;
+
+    var obj;
+    try { obj = JSON.parse(fromBase64Url(s)); } catch (e) { return false; }
+
+    // Apply the numeric fields.
+    if (typeof obj.gpu === 'string' && obj.gpu) el.gpuSelect.value = obj.gpu;
+    if (typeof obj.vram === 'number') el.vram.value = String(obj.vram);
+    if (typeof obj.bw === 'number')   el.bandwidth.value = String(obj.bw);
+    if (typeof obj.dsk === 'number')  el.desktop.value = String(obj.dsk);
+
+    if (obj.hf) {
+      el.hfId.value = obj.hf;
+      fetchGgufVariants({ q: obj.q, rt: obj.rt, kv: obj.kv, asym: obj.asym, k: obj.k, v: obj.v });
+      showShareStatus('Restored from a shared link.', true);
+      return true;
+    }
+
+    // No model in the link — apply the KV selection; init() will compute().
+    if (obj.kv) selectedKvType = obj.kv;
+    if (obj.asym) {
+      asymmetricMode = true;
+      el.asymToggle.checked = true;
+      if (obj.k) selectedKType = obj.k;
+      if (obj.v) selectedVType = obj.v;
+    }
+    return false;
   }
 
   // ─── GPU dropdown ─────────────────────────────────────────────────────────────
@@ -935,8 +1042,10 @@
     compute();
   }
 
-  /** Main entry point: search for GGUF repos, fetch specs + variants, populate dropdowns. */
-  function fetchGgufVariants() {
+  /** Main entry point: search for GGUF repos, fetch specs + variants, populate dropdowns.
+   * `restore` (optional) carries the pre-filled values from a ?s= share link so the
+   * import can re-apply the shared quant / runtime / KV selection after its defaults. */
+  function fetchGgufVariants(restore) {
     var baseName = el.hfId.value.trim();
     if (!baseName) {
       setGgufStatus('Enter a model name to search for GGUF variants.', 'error');
@@ -991,6 +1100,18 @@
           selectedVType = 'f16';
           asymmetricMode = false;
 
+          // A ?s= share link names its own KV selection — re-apply it after
+          // the reset above (which defaults to f16 / symmetric).
+          if (restore) {
+            if (restore.kv) selectedKvType = restore.kv;
+            if (restore.asym) {
+              asymmetricMode = true;
+              el.asymToggle.checked = true;
+              if (restore.k) selectedKType = restore.k;
+              if (restore.v) selectedVType = restore.v;
+            }
+          }
+
           // Select the imported model, then populate the weight dropdown
           // with the imported model's quant variants.
           populateModelDropdown();
@@ -1001,9 +1122,22 @@
           // so the available-VRAM calculation uses the current setting).
           el.runtime.value = estimateRuntimeOverhead(params).toFixed(2);
 
+          // A ?s= share link carries its own runtime overhead — preserve it.
+          if (restore && typeof restore.rt === 'number') el.runtime.value = String(restore.rt);
+
           // Auto-select the largest quant that fits in the available VRAM
           // given the current settings (including MTP variants).
           var best = selectBestWeightQuant();
+
+          // A ?s= share link names a specific quant — apply it if it exists in
+          // the imported model (even if it doesn't fit; the warning will show).
+          if (restore && restore.q) {
+            var m = getSelectedModel();
+            if (m && m.variants.some(function (v) { return v.id === restore.q; })) {
+              el.weightQuant.value = restore.q;
+              best = m.variants.find(function (v) { return v.id === restore.q; });
+            }
+          }
           compute();
           if (best) {
             setGgufStatus('Imported ' + repoId + ' — ' + variants.length + ' quant variants. Auto-selected ' + best.quant + (specsEstimated ? '. Architecture specs estimated from a known ' + archSpecs.label + '.' : '.'), 'ok');
@@ -1056,9 +1190,15 @@
 
     el.ctxSlider.addEventListener('input', updateReadout);
 
-    el.hfImportBtn.addEventListener('click', fetchGgufVariants);
+    el.hfImportBtn.addEventListener('click', function () { fetchGgufVariants(); });
     el.hfId.addEventListener('keydown', function (e) {
       if (e.key === 'Enter') fetchGgufVariants();
+    });
+
+    // Copy the current inputs into a shareable ?s= link and to the clipboard.
+    el.shareBtn.addEventListener('click', function () {
+      copyText(buildShareUrl());
+      showShareStatus('Link copied.');
     });
 
     el.gpuSelect.addEventListener('change', function () {
@@ -1153,7 +1293,13 @@
     [el.vram, el.runtime, el.desktop].forEach(formatDecimal);
 
     populateGpuDropdown();
-    compute();
+
+    // If opened with a ?s= share link, restore the pre-filled values
+    // (and auto-import the model). If an async import was kicked off,
+    // its final compute() handles the rest; otherwise compute now.
+    if (!restoreFromUrl()) {
+      compute();
+    }
   }
 
   document.addEventListener('DOMContentLoaded', init);

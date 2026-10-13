@@ -89,7 +89,13 @@
     <div class="col-right">
 
     <section class="card">
-      <h2>VRAM allocation</h2>
+      <div class="card-header">
+        <h2>VRAM allocation</h2>
+        <div class="share-row">
+          <button type="button" id="shareBtn" class="btn btn-ghost">Copy share link</button>
+          <span class="share-status" id="shareStatus" hidden></span>
+        </div>
+      </div>
       <div class="vram-bar" aria-hidden="true">
         <div class="vram-seg vram-seg-desktop" id="segDesktop"><span class="vram-seg-label"></span></div>
         <div class="vram-seg vram-seg-runtime" id="segRuntime"><span class="vram-seg-label"></span></div>
