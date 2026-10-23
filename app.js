@@ -1159,13 +1159,8 @@
           var existing = importedModels.findIndex(function (m) { return m.repoId === repoId; });
           if (existing >= 0) importedModels[existing] = model;
           else importedModels.push(model);
-          selectedKvType = 'f16';
-          selectedKType = 'f16';
-          selectedVType = 'f16';
-          asymmetricMode = false;
-
-          // A ?s= share link names its own KV selection — re-apply it after
-          // the reset above (which defaults to f16 / symmetric).
+          // A ?s= share link names its own KV selection — apply it over the
+          // current (preserved) selection.
           if (restore) {
             if (restore.kv) selectedKvType = restore.kv;
             if (restore.asym) {
@@ -1379,6 +1374,13 @@
 
     el.asymToggle.addEventListener('change', function () {
       asymmetricMode = el.asymToggle.checked;
+      // `change` only fires on a flip, so a now-off checkbox was just on.
+      // Carry the pair's larger type into the symmetric selection in that case.
+      if (!asymmetricMode) {
+        var kType = getKType();
+        var vType = getVType();
+        selectedKvType = kType.bytesPerElem >= vType.bytesPerElem ? kType.id : vType.id;
+      }
       compute();
     });
 
@@ -1386,6 +1388,11 @@
     [el.vram, el.runtime, el.desktop].forEach(formatDecimal);
 
     populateGpuDropdown();
+
+    // Keep the JS asymmetric state in sync with the checkbox on load —
+    // the checkbox is the user-facing source of truth (a browser may
+    // restore it to checked after a reload).
+    asymmetricMode = el.asymToggle.checked;
 
     // If opened with a ?s= share link, restore the pre-filled values
     // (and auto-import the model). If an async import was kicked off,
