@@ -1091,7 +1091,7 @@
     }
     // Dim: blend in the card's gray background (--surface-2, #1c2128).
     var gray = [28, 33, 40];
-    var dim = 0.3;
+    var dim = 0.5;
     c = c.map(function (r, i) { return Math.round(r + (gray[i] - r) * dim); });
     return 'rgb(' + c.join(', ') + ')';
   }
