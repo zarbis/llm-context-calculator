@@ -293,6 +293,25 @@
     return copied;
   }
 
+  /** The IDs of the active (checked) cache-size buttons in a button set. */
+  function _activeCsIds(container) {
+    var ids = [];
+    container.querySelectorAll('.kv-size-btn').forEach(function (btn) {
+      if (btn.classList.contains('kv-size-btn-active')) ids.push(btn.dataset.id);
+    });
+    return ids;
+  }
+
+  /** Apply a shared set of active cache-size IDs to a button set.
+   *  Undefined → leave all active (the default). */
+  function _applyCsIds(container, ids) {
+    container.querySelectorAll('.kv-size-btn').forEach(function (btn) {
+      var on = (ids === undefined) ? true : ids.indexOf(btn.dataset.id) >= 0;
+      btn.classList.toggle('kv-size-btn-active', on);
+      btn.setAttribute('aria-pressed', String(on));
+    });
+  }
+
   /** Build a shareable URL encoding the current inputs as ?s=<base64url JSON>. */
   function buildShareUrl() {
     var obj = {
@@ -310,7 +329,9 @@
       mtpkv:   selectedMtpKvType,
       mtpasym: mtpAsymmetricMode ? 1 : 0,
       mtapk:   selectedMtpKType,
-      mtpv:    selectedMtpVType
+      mtpv:    selectedMtpVType,
+      cs:    _activeCsIds(el.kvCheckSizes),
+      mtpcs: _activeCsIds(el.mtpKvCheckSizes)
     };
     var payload = toBase64Url(JSON.stringify(obj));
     var base = location.href.split('#')[0].replace(/\?.*$/, '');
@@ -348,7 +369,7 @@
 
     if (obj.hf) {
       el.hfId.value = obj.hf;
-      fetchGgufVariants({ q: obj.q, rt: obj.rt, kv: obj.kv, asym: obj.asym, k: obj.k, v: obj.v });
+      fetchGgufVariants({ q: obj.q, rt: obj.rt, kv: obj.kv, asym: obj.asym, k: obj.k, v: obj.v, cs: obj.cs, mtpcs: obj.mtpcs });
       showShareStatus('Restored from a shared link.', true);
       return true;
     }
@@ -368,6 +389,9 @@
       if (obj.mtpk) selectedMtpKType = obj.mtpk;
       if (obj.mtpv) selectedMtpVType = obj.mtpv;
     }
+    // Restore the active cache-size button states (main + draft).
+    _applyCsIds(el.kvCheckSizes, obj.cs);
+    _applyCsIds(el.mtpKvCheckSizes, obj.mtpcs);
     return false;
   }
 
@@ -1419,6 +1443,8 @@
               if (restore.mtpk) selectedMtpKType = restore.mtpk;
               if (restore.mtpv) selectedMtpVType = restore.mtpv;
             }
+            _applyCsIds(el.kvCheckSizes, restore.cs);
+            _applyCsIds(el.mtpKvCheckSizes, restore.mtpcs);
           }
 
           // Select the imported model, then populate the weight dropdown

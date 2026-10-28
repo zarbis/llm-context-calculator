@@ -129,14 +129,17 @@ the current inputs into a `?s=<base64url-encoded JSON>` query param and copies
 it to the clipboard. The JSON carries `gpu, vram, bw, rt, dsk, hf, q, kv,
 asym, k, v, mtpkv, mtpasym, mtapk, mtpv` (the HF repo id, weight quant,
 main KV type, asymmetric K/V types, and MTP draft KV type / asymmetric K/V
-types). The access token is never included in the link.
+types) plus `cs` / `mtpcs` (the active cache-size button IDs for the main
+and draft rows). The access token is never included in the link.
 
 On page load, `restoreFromUrl()` parses `?s=` and:
 - applies the numeric fields (GPU / VRAM / bandwidth / runtime / desktop);
 - if `hf` is present, sets the HF field and auto-triggers the import
   (`fetchGgufVariants`), re-applying the shared `q` / `rt` / KV / MTP-KV
-  selection after the import's own defaults;
-- otherwise applies the KV + MTP-KV selection and computes.
+  selection + the active cache-size button states after the import's own
+  defaults;
+- otherwise applies the KV + MTP-KV selection + the active cache-size button
+  states, and computes.
 
 If the
 import can't run (offline / gated), the hardware + overheads still restore and
