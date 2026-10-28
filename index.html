@@ -106,9 +106,9 @@
         <div class="vram-seg vram-seg-desktop" id="segDesktop"><span class="vram-seg-label"></span></div>
         <div class="vram-seg vram-seg-runtime" id="segRuntime"><span class="vram-seg-label"></span></div>
         <div class="vram-seg vram-seg-weights" id="segWeights"><span class="vram-seg-label"></span></div>
-        <div class="vram-seg vram-seg-mtp"     id="segMTP"><span class="vram-seg-label"></span></div>
         <div class="vram-seg vram-seg-kv"      id="segKV"><span class="vram-seg-label"></span></div>
-        <div class="vram-seg vram-seg-free"   id="segFree"><span class="vram-seg-label"></span></div>
+        <div class="vram-seg vram-seg-mtp"     id="segMTP"><span class="vram-seg-label"></span></div>
+        <div class="vram-seg vram-seg-mtp-kv"  id="segMtpKV"><span class="vram-seg-label"></span></div>
       </div>
       <div class="vram-legend">
         <div class="legend-item">
@@ -127,19 +127,19 @@
           <span class="legend-value" id="weightsGB">–</span>
         </div>
         <div class="legend-item">
-          <span class="swatch swatch-mtp"></span>
-          <span class="legend-label">MTP head</span>
-          <span class="legend-value" id="mtpGB">–</span>
-        </div>
-        <div class="legend-item">
           <span class="swatch swatch-kv"></span>
           <span class="legend-label">KV cache (context)</span>
           <span class="legend-value" id="kvGB">–</span>
         </div>
         <div class="legend-item">
-          <span class="swatch swatch-free"></span>
-          <span class="legend-label">Free</span>
-          <span class="legend-value" id="freeGB">–</span>
+          <span class="swatch swatch-mtp"></span>
+          <span class="legend-label">MTP head</span>
+          <span class="legend-value" id="mtpGB">–</span>
+        </div>
+        <div class="legend-item">
+          <span class="swatch swatch-mtp-kv"></span>
+          <span class="legend-label">MTP KV cache</span>
+          <span class="legend-value" id="mtpKvGB">–</span>
         </div>
       </div>
       <div class="stats">
@@ -157,25 +157,6 @@
         </div>
       </div>
       <p class="warning" id="warning" hidden></p>
-      <div class="slider-labels">
-        <span>All VRAM · 0 context</span>
-        <span>Max context · 0 headroom</span>
-      </div>
-      <input type="range" id="ctxSlider" min="0" max="100" value="100" step="1" disabled>
-      <div class="readout">
-        <div class="readout-item">
-          <span>Context</span>
-          <strong id="ctxReadout">0 tokens</strong>
-        </div>
-        <div class="readout-item">
-          <span>Headroom</span>
-          <strong id="headroomReadout">0.00 GB</strong>
-        </div>
-        <div class="readout-item">
-          <span>≈ Words</span>
-          <strong id="wordsReadout">0</strong>
-        </div>
-      </div>
     </section>
 
     <section class="card">
@@ -190,6 +171,16 @@
       </div>
       <div class="kv-check-sizes" id="kvCheckSizes">
         <span class="kv-check-label">Cache sizes:</span>
+      </div>
+      <div class="kv-asym-toggle-row" id="mtpAsymRow" hidden>
+        <label class="kv-toggle">
+          <input type="checkbox" id="mtpAsymToggle">
+          <span class="kv-toggle-track"></span>
+          <span class="kv-toggle-label">Draft asymmetric K/V cache sizes</span>
+        </label>
+      </div>
+      <div class="kv-check-sizes" id="mtpKvCheckSizes" hidden>
+        <span class="kv-check-label">Draft cache sizes:</span>
       </div>
       <div class="kv-chart" id="kvChart"></div>
     </section>

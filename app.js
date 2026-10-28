@@ -20,11 +20,11 @@
   const KV_CACHE_TYPES = [
     { id: 'f32',    label: 'f32',    bytesPerElem: 4.0 },
     { id: 'f16',    label: 'f16',    bytesPerElem: 2.0 },
-    { id: 'q8_0',   label: 'q8_0',   bytesPerElem: 1.025 },
-    { id: 'q5_1',   label: 'q5_1',   bytesPerElem: 0.673 },
-    { id: 'q5_0',   label: 'q5_0',   bytesPerElem: 0.649 },
-    { id: 'q4_1',   label: 'q4_1',   bytesPerElem: 0.548 },
-    { id: 'q4_0',   label: 'q4_0',   bytesPerElem: 0.524 },
+    { id: 'q8_0',   label: 'q8_0',   bytesPerElem: 1.03125 },
+    { id: 'q5_1',   label: 'q5_1',   bytesPerElem: 0.6875  },
+    { id: 'q5_0',   label: 'q5_0',   bytesPerElem: 0.65625 },
+    { id: 'q4_1',   label: 'q4_1',   bytesPerElem: 0.5625  },
+    { id: 'q4_0',   label: 'q4_0',   bytesPerElem: 0.53125 },
   ];
 
   const GPU_LIST = [
@@ -141,26 +141,25 @@
     segMTP:      $('segMTP'),
     segRuntime:  $('segRuntime'),
     segKV:       $('segKV'),
-    segFree:     $('segFree'),
     desktopGB:   $('desktopGB'),
     weightsGB:   $('weightsGB'),
     mtpGB:       $('mtpGB'),
     runtimeGB:   $('runtimeGB'),
     kvGB:        $('kvGB'),
-    freeGB:      $('freeGB'),
     kvPerToken:  $('kvPerToken'),
     decodeSpeed: $('decodeSpeed'),
     maxContext:  $('maxContext'),
     warning:     $('warning'),
-    ctxSlider:   $('ctxSlider'),
-    ctxReadout:  $('ctxReadout'),
-    headroomReadout: $('headroomReadout'),
-    wordsReadout:   $('wordsReadout'),
     hfId:        $('hfId'),
     hfToken:     $('hfToken'),
     hfImportBtn: $('hfImportBtn'),
     asymToggle:  $('asymToggle'),
     kvCheckSizes: $('kvCheckSizes'),
+    mtpAsymRow:    $('mtpAsymRow'),
+    mtpAsymToggle: $('mtpAsymToggle'),
+    mtpKvCheckSizes: $('mtpKvCheckSizes'),
+    segMtpKV:    $('segMtpKV'),
+    mtpKvGB:     $('mtpKvGB'),
 
     ggufStatus:   $('ggufStatus'),
     kvChartTitle:  $('kvChartTitle'),
@@ -177,7 +176,7 @@
 
   // ─── State ───────────────────────────────────────────────────────────────────
 
-  /** Set after a successful compute; read by updateReadout. */
+  /** Set after a successful compute; read by updateVramBar. */
   let state = null; // { totalVRAM, desktopGB, weightsGB, runtimeGB, remainingGB, kvPerToken, maxContext, kvType }
 
   /** Models imported so far; read by readInputs/compute when one is selected in the model dropdown. */
@@ -188,6 +187,12 @@
   let asymmetricMode = false;
   let selectedKType = 'f16';
   let selectedVType = 'f16';
+
+  /** The active MTP draft KV cache type. Defaults to 'f16'. */
+  let selectedMtpKvType = 'f16';
+  let mtpAsymmetricMode = false;
+  let selectedMtpKType  = 'f16';
+  let selectedMtpVType  = 'f16';
 
   /** Resolve the active KV cache type object from selectedKvType. */
   function getKvType() {
@@ -204,6 +209,24 @@
   /** Resolve the active V cache type object. */
   function getVType() {
     var t = KV_CACHE_TYPES.find(function (t) { return t.id === selectedVType; });
+    return t || KV_CACHE_TYPES.find(function (t) { return t.id === 'f16'; });
+  }
+
+  /** Resolve the active MTP draft KV cache type object from selectedMtpKvType. */
+  function getMtpKvType() {
+    var t = KV_CACHE_TYPES.find(function (t) { return t.id === selectedMtpKvType; });
+    return t || KV_CACHE_TYPES.find(function (t) { return t.id === 'f16'; });
+  }
+
+  /** Resolve the active MTP draft K cache type object. */
+  function getMtpKType() {
+    var t = KV_CACHE_TYPES.find(function (t) { return t.id === selectedMtpKType; });
+    return t || KV_CACHE_TYPES.find(function (t) { return t.id === 'f16'; });
+  }
+
+  /** Resolve the active MTP draft V cache type object. */
+  function getMtpVType() {
+    var t = KV_CACHE_TYPES.find(function (t) { return t.id === selectedMtpVType; });
     return t || KV_CACHE_TYPES.find(function (t) { return t.id === 'f16'; });
   }
 
@@ -283,7 +306,11 @@
       kv:   selectedKvType,
       asym: asymmetricMode ? 1 : 0,
       k:    selectedKType,
-      v:    selectedVType
+      v:    selectedVType,
+      mtpkv:   selectedMtpKvType,
+      mtpasym: mtpAsymmetricMode ? 1 : 0,
+      mtapk:   selectedMtpKType,
+      mtpv:    selectedMtpVType
     };
     var payload = toBase64Url(JSON.stringify(obj));
     var base = location.href.split('#')[0].replace(/\?.*$/, '');
@@ -333,6 +360,13 @@
       el.asymToggle.checked = true;
       if (obj.k) selectedKType = obj.k;
       if (obj.v) selectedVType = obj.v;
+    }
+    if (obj.mtpkv) selectedMtpKvType = obj.mtpkv;
+    if (obj.mtpasym) {
+      mtpAsymmetricMode = true;
+      el.mtpAsymToggle.checked = true;
+      if (obj.mtpk) selectedMtpKType = obj.mtpk;
+      if (obj.mtpv) selectedMtpVType = obj.mtpv;
     }
     return false;
   }
@@ -574,13 +608,22 @@
       return;
     }
 
-    var weightsGB, mtpGB;
+    var weightsGB, mtpGB, mtpKvPerToken = 0;
     var m = getSelectedModel();
     if (m && weightQuant.mtp) {
       // MTP variant selected: the base model is the non-MTP flavor of the same quant.
       var base = m.variants.find(function (v) { return !v.mtp && v.quant === weightQuant.quant; });
       weightsGB = base ? base.sizeGB : weightQuant.sizeGB;
       mtpGB = weightQuant.sizeGB - weightsGB;
+      // MTP draft KV cache: 1 layer, same kvHeads/headDim as the main model.
+      mtpKvBase = 2 * 1 * inp.kvHeads * inp.headDim;
+      if (mtpAsymmetricMode) {
+        var mtpKType = getMtpKType();
+        var mtpVType = getMtpVType();
+        mtpKvPerToken = (mtpKvBase / 2) * (mtpKType.bytesPerElem + mtpVType.bytesPerElem);
+      } else {
+        mtpKvPerToken = mtpKvBase * getMtpKvType().bytesPerElem;
+      }
     } else {
       weightsGB = weightQuant.sizeGB;
       mtpGB = 0;
@@ -592,8 +635,8 @@
     el.runtimeGB.textContent   = fmtGB(inp.runtime);
     el.desktopGB.textContent   = fmtGB(inp.desktop);
     el.kvGB.textContent        = '0.00 GB';
-    el.freeGB.textContent      = '0.00 GB';
-    renderVramBar(inp.totalVRAM, inp.desktop, weightsGB, mtpGB, inp.runtime, 0, 0);
+    el.mtpKvGB.textContent     = mtpKvPerToken > 0 ? '0.00 GB' : '–';
+    renderVramBar(inp.totalVRAM, inp.desktop, weightsGB, mtpGB, inp.runtime, mtpKvPerToken > 0 ? 0 : 0, 0);
 
     // ── KV cache: symmetric (same type for K & V) or asymmetric (K ≠ V) ────────
     var kvPerToken, kvType;
@@ -605,40 +648,47 @@
       kvType = getKvType();
       kvPerToken = kvBase * kvType.bytesPerElem;
     }
-    var maxContext = remainingGB > 0 ? Math.floor(remainingGB * 1e9 / kvPerToken) : 0;
+    var totalKvPerToken = kvPerToken + mtpKvPerToken;
+    var maxContext = remainingGB > 0 ? Math.floor(remainingGB * 1e9 / totalKvPerToken) : 0;
+    var activeMainSel = asymmetricMode ? { kId: selectedKType, vId: selectedVType } : { id: selectedKvType };
+    var activeDraftSel = mtpAsymmetricMode ? { kId: selectedMtpKType, vId: selectedMtpVType } : { id: selectedMtpKvType };
+    var mtpKvBase = weightQuant.mtp ? 2 * 1 * inp.kvHeads * inp.headDim : 0;
+
+    // Show/hide the MTP draft KV card.
+    el.mtpAsymRow.hidden = !weightQuant.mtp;
+    el.mtpKvCheckSizes.hidden = !weightQuant.mtp;
 
     if (remainingGB <= 0) {
       el.maxContext.textContent  = '0 tokens';
       el.kvPerToken.textContent   = '–';
+      el.mtpKvGB.textContent      = '–';
       el.decodeSpeed.textContent  = '–';
-      renderKvChart(remainingGB, kvBase, null, null, null);
+      renderKvArea(remainingGB, kvBase, mtpKvBase, activeMainSel, activeDraftSel, weightQuant.mtp);
       setKvChartTitle();
       showWarning('Model does not fit in available VRAM. Increase VRAM, use a smaller quant, or reduce overheads.');
-      setSliderDisabled();
       return;
     }
 
     if (maxContext <= 0) {
       el.maxContext.textContent  = '0 tokens';
       el.kvPerToken.textContent   = '–';
+      el.mtpKvGB.textContent      = '–';
       el.decodeSpeed.textContent  = '–';
-      renderKvChart(remainingGB, kvBase, null, null, null);
+      renderKvArea(remainingGB, kvBase, mtpKvBase, activeMainSel, activeDraftSel, weightQuant.mtp);
       setKvChartTitle();
       showWarning('Not enough VRAM for even one token of context. The KV cache alone exceeds the remaining VRAM.');
-      setSliderDisabled();
       return;
     }
 
     el.warning.hidden = true;
 
-    state = { totalVRAM: inp.totalVRAM, desktopGB: inp.desktop, weightsGB: weightsGB, mtpGB: mtpGB, runtimeGB: inp.runtime, remainingGB: remainingGB, kvPerToken: kvPerToken, maxContext: maxContext };
-    renderKvChart(remainingGB, kvBase, selectedKvType, selectedKType, selectedVType);
+    state = { totalVRAM: inp.totalVRAM, desktopGB: inp.desktop, weightsGB: weightsGB, mtpGB: mtpGB, runtimeGB: inp.runtime, remainingGB: remainingGB, kvPerToken: kvPerToken, mtpKvPerToken: mtpKvPerToken, maxContext: maxContext };
+    renderKvArea(remainingGB, kvBase, mtpKvBase, activeMainSel, activeDraftSel, weightQuant.mtp);
     setKvChartTitle();
-    el.kvPerToken.textContent = (kvPerToken / 1000).toFixed(1) + ' MB';
+    el.kvPerToken.textContent = (totalKvPerToken / 1000).toFixed(1) + ' MB';
     el.maxContext.textContent  = fmtInt(maxContext) + ' tokens';
 
     // Decode speed: memory-bandwidth bound.
-    // tokens/s ≈ τ × total_bandwidth / (weight_bytes + mtp_bytes + kv_bytes_per_token)
     // τ = accepted length (avg tokens per forward pass). With MTP (K=3 draft),
     // τ ≈ 2.0 (typical acceptance rate ~0.6: 1 + 0.6 + 0.36 + 0.216 ≈ 2.2,
     // rounded conservatively). Without MTP, τ = 1.
@@ -646,30 +696,36 @@
     if (bw > 0) {
       var weightBytes = (weightsGB + mtpGB) * 1e9;
       var mtpFactor = weightQuant.mtp ? 2 : 1;
-      var tokPerSec = mtpFactor * (bw * 1e9) / (weightBytes + kvPerToken);
+      var tokPerSec = mtpFactor * (bw * 1e9) / (weightBytes + totalKvPerToken);
       el.decodeSpeed.textContent = fmtInt(Math.round(tokPerSec)) + ' tok/s';
     } else {
       el.decodeSpeed.textContent = '–';
     }
 
-    setSlider(maxContext);
+    updateVramBar();
   }
 
   // ─── VRAM allocation bar ─────────────────────────────────────────────────────
 
-  const VRAM_SEG_NAMES = ['Desktop apps', 'Model runtime', 'Model weights', 'MTP head', 'KV cache', 'Free'];
+  const VRAM_SEG_NAMES = ['Desktop apps', 'Model runtime', 'Model weights', 'KV cache', 'MTP head', 'MTP KV cache'];
 
   /**
    * Render the horizontal VRAM allocation bar.
    * Each segment width = segmentGB / totalVRAM × 100%.
-   * If kvGB ≤ 0 && freeGB ≤ 0 (overfull), scale the 3 used segments to fill 100%.
+   * If kvGB ≤ 0 (overfull), scale the 5 used segments to fill 100%.
    * Each segment stores name/size/pct in data-* attributes for the
    * speech-bubble tooltip (shown on hover, zero delay) and shows an inline
    * percentage label when its displayed width is wide enough (≥ 10%).
    */
-  function renderVramBar(totalVRAM, desktopGB, weightsGB, mtpGB, runtimeGB, kvGB, freeGB) {
-    var segs = [el.segDesktop, el.segRuntime, el.segWeights, el.segMTP, el.segKV, el.segFree];
-    var segGBs = [desktopGB, runtimeGB, weightsGB, mtpGB, kvGB, freeGB];
+  function renderVramBar(totalVRAM, desktopGB, weightsGB, mtpGB, runtimeGB, mtpKvGB, kvGB) {
+    var segs = [el.segDesktop, el.segRuntime, el.segWeights, el.segKV, el.segMTP, el.segMtpKV];
+    var segGBs = [desktopGB, runtimeGB, weightsGB, kvGB, mtpGB, mtpKvGB];
+
+    // Hide MTP segments + legend items when a non-MTP variant is selected.
+    el.segMTP.hidden      = mtpGB <= 0;
+    el.segMtpKV.hidden    = mtpKvGB <= 0;
+    el.mtpGB.closest('.legend-item').style.display    = mtpGB <= 0 ? 'none' : '';
+    el.mtpKvGB.closest('.legend-item').style.display  = mtpKvGB <= 0 ? 'none' : '';
 
     if (totalVRAM <= 0) {
       segs.forEach(function (s) {
@@ -688,13 +744,13 @@
     var truePcts = segGBs.map(function (gb) { return (gb / totalVRAM) * 100; });
 
     // widthPcts: the displayed width of each segment. In the overfull case the
-    // 3 used segments are scaled to fill 100%; KV/Free are 0.
-    var overfull = kvGB <= 0 && freeGB <= 0;
+    // 5 used segments are scaled to fill 100%; KV is 0.
+    var overfull = kvGB <= 0;
     var widthPcts;
     if (overfull) {
-      var usedTotal = desktopGB + weightsGB + mtpGB + runtimeGB;
+      var usedTotal = desktopGB + runtimeGB + weightsGB + mtpGB + mtpKvGB;
       widthPcts = segGBs.map(function (gb, i) {
-        return (i < 4 && usedTotal > 0) ? (gb / usedTotal) * 100 : 0;
+        return ((i === 0 || i === 1 || i === 2 || i === 4 || i === 5) && usedTotal > 0) ? (gb / usedTotal) * 100 : 0;
       });
     } else {
       widthPcts = truePcts.slice();
@@ -783,40 +839,44 @@
 
   // ─── KV cache bar chart ──────────────────────────────────────────────────────
 
-  /** Set the chart title/hint for the KV cache type chart. */
+  /** Set the chart title/hint for the KV cache type charts (main + MTP draft). */
   function setKvChartTitle() {
     var m = getSelectedModel();
+    var wq = getWeightQuant();
+    var isMtp = m && wq && wq.mtp;
     if (m) {
-      if (asymmetricMode) {
-        el.kvChartTitle.textContent = 'KV cache types for ' + m.repoId;
+      if (isMtp) {
+        el.kvChartTitle.textContent = 'Main / Draft KV cache types';
+        el.kvChartHint.textContent = 'Rows are main KV types, columns are draft KV types. Each cell shows the max context tokens for that (main, draft) pair. Check boxes to include/exclude types. Click a cell to select that pair — the VRAM allocation card updates accordingly.';
+      } else if (asymmetricMode) {
+        el.kvChartTitle.textContent = 'KV cache types';
         el.kvChartHint.textContent = 'Each bar shows max context for a K/V cache pair. Check boxes to include/exclude types. Click a bar to select that pair.';
       } else {
-        el.kvChartTitle.textContent = 'KV cache types for ' + m.repoId;
+        el.kvChartTitle.textContent = 'KV cache types';
         el.kvChartHint.textContent = 'Each bar shows the max context tokens for a llama.cpp KV cache type (--cache-type-k / --cache-type-v). Click a bar to select that KV type — the VRAM allocation card updates accordingly.';
       }
     } else {
-      el.kvChartTitle.textContent = 'No model imported';
-      el.kvChartHint.textContent = 'Import a model to see its KV cache types.';
+      el.kvChartTitle.textContent = 'KV cache types';
+      el.kvChartHint.textContent = 'Import a model to see its quant variants.';
     }
   }
 
   /**
-   * Render the bar chart of KV cache types.
+   * Shared bar-chart renderer for the KV cache type charts (main + MTP draft).
    * Symmetric mode: one bar per type (same type for K & V).
    * Asymmetric mode: one bar per (K, V) pair of checked types.
    * Bar width ∝ max context tokens, sorted ascending.
    */
-  function renderKvChart(remainingGB, kvBase, activeId, activeKId, activeVId) {
-    var chart = el.kvChart;
-    chart.innerHTML = '';
+  function _renderKvChart(container, remainingGB, kvBase, activeId, activeKId, activeVId, asymmetricMode, btnContainer, onSelectType, onSelectPair) {
+    container.innerHTML = '';
 
     if (remainingGB <= 0 || kvBase <= 0) {
       return;
     }
 
-    // Collect active type ids from the single button set
+    // Collect active type ids from the button set
     var checkedIds = [];
-    document.querySelectorAll('.kv-size-btn').forEach(function (btn) {
+    btnContainer.querySelectorAll('.kv-size-btn').forEach(function (btn) {
       if (btn.classList.contains('kv-size-btn-active')) checkedIds.push(btn.dataset.id);
     });
 
@@ -898,73 +958,242 @@
       row.appendChild(label);
       row.appendChild(track);
       row.appendChild(value);
-      chart.appendChild(row);
+      container.appendChild(row);
 
       if (asymmetricMode) {
-        row.addEventListener('click', function () { selectKvPair(r.kId, r.vId); });
+        row.addEventListener('click', function () { onSelectPair(r.kId, r.vId); });
         row.addEventListener('keydown', function (e) {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            selectKvPair(r.kId, r.vId);
+            onSelectPair(r.kId, r.vId);
           }
         });
       } else {
-        row.addEventListener('click', function () { selectKvType(r.type.id); });
+        row.addEventListener('click', function () { onSelectType(r.type.id); });
         row.addEventListener('keydown', function (e) {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            selectKvType(r.type.id);
+            onSelectType(r.type.id);
           }
         });
       }
     });
   }
 
-  // ─── Slider helpers ──────────────────────────────────────────────────────────
-
-  function setSlider(maxContext) {
-    el.ctxSlider.disabled = false;
-    el.ctxSlider.min   = 0;
-    el.ctxSlider.max   = maxContext;
-    el.ctxSlider.step  = 1;
-    el.ctxSlider.value = maxContext; // rest at far-right (max context, 0 headroom)
-    state.maxContext   = maxContext;
-    el.maxContext.textContent = fmtInt(maxContext) + ' tokens';
-    updateReadout();
+  /** Render the main KV cache type bar chart (non-MTP). */
+  function renderKvChart(remainingGB, kvBase, activeId, activeKId, activeVId) {
+    _renderKvChart(el.kvChart, remainingGB, kvBase, activeId, activeKId, activeVId, asymmetricMode, el.kvCheckSizes, selectKvType, selectKvPair);
   }
 
-  function setSliderDisabled() {
-    el.ctxSlider.disabled = true;
-    el.ctxSlider.max   = 0;
-    el.ctxSlider.value = 0;
-    el.ctxSlider.step  = 1;
-    el.ctxSlider.style.background = '';
-    el.ctxReadout.textContent     = '0 tokens';
-    el.headroomReadout.textContent = '0.00 GB';
-    el.wordsReadout.textContent    = '0 words';
+  // ─── MTP draft KV cache spreadsheet ──────────────────────────────────────────
+
+  /** Collect the checked main KV selections from the main button set. */
+  function mainSelections(asym) {
+    var checkedIds = [];
+    el.kvCheckSizes.querySelectorAll('.kv-size-btn').forEach(function (btn) {
+      if (btn.classList.contains('kv-size-btn-active')) checkedIds.push(btn.dataset.id);
+    });
+    if (!asym) return checkedIds.map(function (id) { return { id: id }; });
+    var sels = [];
+    checkedIds.forEach(function (kId) {
+      checkedIds.forEach(function (vId) {
+        var kType = KV_CACHE_TYPES.find(function (t) { return t.id === kId; });
+        var vType = KV_CACHE_TYPES.find(function (t) { return t.id === vId; });
+        if (kType.bytesPerElem < vType.bytesPerElem) return; // mirror dedup
+        sels.push({ kId: kId, vId: vId });
+      });
+    });
+    return sels;
   }
 
-  function updateReadout() {
+  /** Collect the checked draft KV selections from the draft button set. */
+  function draftSelections(asym) {
+    var checkedIds = [];
+    el.mtpKvCheckSizes.querySelectorAll('.kv-size-btn').forEach(function (btn) {
+      if (btn.classList.contains('kv-size-btn-active')) checkedIds.push(btn.dataset.id);
+    });
+    if (!asym) return checkedIds.map(function (id) { return { id: id }; });
+    var sels = [];
+    checkedIds.forEach(function (kId) {
+      checkedIds.forEach(function (vId) {
+        var kType = KV_CACHE_TYPES.find(function (t) { return t.id === kId; });
+        var vType = KV_CACHE_TYPES.find(function (t) { return t.id === vId; });
+        if (kType.bytesPerElem < vType.bytesPerElem) return; // mirror dedup
+        sels.push({ kId: kId, vId: vId });
+      });
+    });
+    return sels;
+  }
+
+  function _selKey(sel, asym) {
+    return asym ? sel.kId + '/' + sel.vId : sel.id;
+  }
+  function _selLabel(sel, asym) {
+    return asym ? sel.kId + ' / ' + sel.vId : sel.id;
+  }
+  function _selFamily(sel, asym) {
+    return (asym ? sel.kId : sel.id).split('_')[0].toUpperCase();
+  }
+
+  /** Max context tokens for a (main, draft) selection pair. */
+  function _cellMaxCtx(remainingGB, kvBase, mtpKvBase, mSel, dSel, mAsym, dAsym) {
+    var mainPerTok, mtpPerTok;
+    if (mAsym) {
+      var mk = KV_CACHE_TYPES.find(function (t) { return t.id === mSel.kId; });
+      var mv = KV_CACHE_TYPES.find(function (t) { return t.id === mSel.vId; });
+      mainPerTok = (kvBase / 2) * (mk.bytesPerElem + mv.bytesPerElem);
+    } else {
+      var mt = KV_CACHE_TYPES.find(function (t) { return t.id === mSel.id; });
+      mainPerTok = kvBase * mt.bytesPerElem;
+    }
+    if (dAsym) {
+      var dk = KV_CACHE_TYPES.find(function (t) { return t.id === dSel.kId; });
+      var dv = KV_CACHE_TYPES.find(function (t) { return t.id === dSel.vId; });
+      mtpPerTok = (mtpKvBase / 2) * (dk.bytesPerElem + dv.bytesPerElem);
+    } else {
+      var dt = KV_CACHE_TYPES.find(function (t) { return t.id === dSel.id; });
+      mtpPerTok = mtpKvBase * dt.bytesPerElem;
+    }
+    return Math.floor(remainingGB * 1e9 / (mainPerTok + mtpPerTok));
+  }
+
+  /** Select a (main, draft) spreadsheet cell: update the selection and recompute. */
+  function selectKvSheetCell(mSel, dSel, mAsym, dAsym) {
+    if (mAsym) {
+      selectedKType = mSel.kId;
+      selectedVType = mSel.vId;
+    } else {
+      selectedKvType = mSel.id;
+    }
+    if (dAsym) {
+      selectedMtpKType = dSel.kId;
+      selectedMtpVType = dSel.vId;
+    } else {
+      selectedMtpKvType = dSel.id;
+    }
+    compute();
+  }
+
+  /** Interpolate red→yellow→green across [min, max] (t = 0.5 → yellow),
+   *  then dim the result by blending in the card's gray background. */
+  function _sheetColor(value, min, max) {
+    var t = (max === min) ? 0.5 : (value - min) / (max - min);
+    if (t < 0) t = 0;
+    else if (t > 1) t = 1;
+    var red    = [248, 81, 73];   // #f85149
+    var yellow = [240, 200, 72];  // #f0c848
+    var green  = [63, 185, 80];   // #3fb950
+    var c;
+    if (t <= 0.5) {
+      c = red.map(function (r, i) { return r + (yellow[i] - r) * (t / 0.5); });
+    } else {
+      c = yellow.map(function (r, i) { return r + (green[i] - r) * ((t - 0.5) / 0.5); });
+    }
+    // Dim: blend in the card's gray background (--surface-2, #1c2128).
+    var gray = [28, 33, 40];
+    var dim = 0.3;
+    c = c.map(function (r, i) { return Math.round(r + (gray[i] - r) * dim); });
+    return 'rgb(' + c.join(', ') + ')';
+  }
+
+  /** Render the MTP draft KV cache spreadsheet (rows = main types, cols = draft types). */
+  function renderKvSheet(remainingGB, kvBase, mtpKvBase, activeMainSel, activeDraftSel, mAsym, dAsym) {
+    el.kvChart.innerHTML = '';
+    if (remainingGB <= 0 || kvBase <= 0 || mtpKvBase <= 0) return;
+
+    var mSels = mainSelections(mAsym);
+    var dSels = draftSelections(dAsym);
+    if (mSels.length === 0 || dSels.length === 0) return;
+
+    // Track the min/max cell value so each cell can be colored
+    // red (lowest) → yellow (median) → green (highest).
+    var min = Infinity, max = -Infinity;
+    mSels.forEach(function (m) {
+      dSels.forEach(function (d) {
+        var v = _cellMaxCtx(remainingGB, kvBase, mtpKvBase, m, d, mAsym, dAsym);
+        if (v < min) min = v;
+        if (v > max) max = v;
+      });
+    });
+
+    var activeMKey = _selKey(activeMainSel, mAsym);
+    var activeDKey = _selKey(activeDraftSel, dAsym);
+
+    var table = document.createElement('table');
+    table.className = 'kv-sheet-table';
+
+    var thead = document.createElement('thead');
+    var headRow = document.createElement('tr');
+    var corner = document.createElement('td');
+    corner.className = 'kv-sheet-corner';
+    corner.textContent = 'Main \\ Draft';
+    headRow.appendChild(corner);
+    dSels.forEach(function (d) {
+      var th = document.createElement('th');
+      th.className = 'kv-sheet-col-header';
+      th.textContent = _selLabel(d, dAsym);
+      var fam = _selFamily(d, dAsym);
+      if (KV_FAMILY_COLORS[fam]) th.style.color = KV_FAMILY_COLORS[fam];
+      headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    var tbody = document.createElement('tbody');
+    mSels.forEach(function (m) {
+      var row = document.createElement('tr');
+      var th = document.createElement('th');
+      th.className = 'kv-sheet-row-header';
+      th.textContent = _selLabel(m, mAsym);
+      var fam = _selFamily(m, mAsym);
+      if (KV_FAMILY_COLORS[fam]) th.style.color = KV_FAMILY_COLORS[fam];
+      row.appendChild(th);
+      dSels.forEach(function (d) {
+        var maxCtx = _cellMaxCtx(remainingGB, kvBase, mtpKvBase, m, d, mAsym, dAsym);
+        var td = document.createElement('td');
+        var mMatch = (_selKey(m, mAsym) === activeMKey);
+        var dMatch = (_selKey(d, dAsym) === activeDKey);
+        var isActive = (mMatch && dMatch);
+        var isCross = (mMatch || dMatch) && !isActive;
+        td.className = 'kv-sheet-cell' + (isActive ? ' kv-sheet-cell-active' : (isCross ? ' kv-sheet-cell-cross' : ''));
+        td.style.backgroundColor = _sheetColor(maxCtx, min, max);
+        td.textContent = fmtInt(maxCtx);
+        td.setAttribute('role', 'button');
+        td.setAttribute('tabindex', '0');
+        td.setAttribute('aria-label', _selLabel(m, mAsym) + ' × ' + _selLabel(d, dAsym) + ' — ' + fmtInt(maxCtx) + ' tokens');
+        td.addEventListener('click', function () { selectKvSheetCell(m, d, mAsym, dAsym); });
+        td.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            selectKvSheetCell(m, d, mAsym, dAsym);
+          }
+        });
+        row.appendChild(td);
+      });
+      tbody.appendChild(row);
+    });
+    table.appendChild(tbody);
+    el.kvChart.appendChild(table);
+  }
+
+  /** Render the KV area: bars (non-MTP) or the MTP spreadsheet. */
+  function renderKvArea(remainingGB, kvBase, mtpKvBase, activeMainSel, activeDraftSel, isMtp) {
+    if (isMtp) {
+      renderKvSheet(remainingGB, kvBase, mtpKvBase, activeMainSel, activeDraftSel, asymmetricMode, mtpAsymmetricMode);
+    } else {
+      renderKvChart(remainingGB, kvBase, selectedKvType, selectedKType, selectedVType);
+    }
+  }
+
+  // ─── VRAM bar sync ───────────────────────────────────────────────────────────
+
+  function updateVramBar() {
     if (!state) return;
-
-    var ctx        = parseInt(el.ctxSlider.value, 10) || 0;
-    var kvUsedGB   = ctx * state.kvPerToken / 1e9;
-    var headroomGB = state.remainingGB - kvUsedGB;
-    var words      = Math.round(ctx * 0.75);
-
-    el.ctxReadout.textContent      = fmtInt(ctx) + ' tokens';
-    el.headroomReadout.textContent  = fmtGB(Math.max(0, headroomGB));
-    el.wordsReadout.textContent     = fmtInt(words) + ' words';
-    el.kvGB.textContent             = fmtGB(kvUsedGB);
-    el.freeGB.textContent           = fmtGB(Math.max(0, headroomGB));
-
-    // Filled-track visual
-    var pct = state.maxContext > 0 ? (ctx / state.maxContext) * 100 : 0;
-    el.ctxSlider.style.background =
-      'linear-gradient(to right, var(--accent) ' + pct + '%, var(--border) ' + pct + '%)';
-
-    // Keep the VRAM allocation bar in sync with the slider.
-    renderVramBar(state.totalVRAM, state.desktopGB, state.weightsGB, state.mtpGB, state.runtimeGB, kvUsedGB, Math.max(0, headroomGB));
+    var mainKvUsedGB = state.maxContext * state.kvPerToken / 1e9;
+    var mtpKvUsedGB  = state.mtpKvPerToken ? state.maxContext * state.mtpKvPerToken / 1e9 : 0;
+    el.kvGB.textContent      = fmtGB(mainKvUsedGB);
+    el.mtpKvGB.textContent   = mtpKvUsedGB > 0 ? fmtGB(mtpKvUsedGB) : '–';
+    renderVramBar(state.totalVRAM, state.desktopGB, state.weightsGB, state.mtpGB, state.runtimeGB, mtpKvUsedGB, mainKvUsedGB);
   }
 
   // ─── Warning & reset ─────────────────────────────────────────────────────────
@@ -980,15 +1209,16 @@
     el.runtimeGB.textContent   = '–';
     el.desktopGB.textContent   = '–';
     el.kvGB.textContent        = '–';
-    el.freeGB.textContent      = '–';
+    el.mtpKvGB.textContent     = '–';
     el.kvPerToken.textContent  = '–';
     el.decodeSpeed.textContent = '–';
     el.maxContext.textContent  = '–';
     state = null;
-    renderVramBar(0, 0, 0, 0, 0, 0, 0);
+    renderVramBar(0, 0, 0, 0, 0, 0, 0, 0);
     renderKvChart(0, 0, null, null, null);
+    el.mtpAsymRow.hidden = true;
+    el.mtpKvCheckSizes.hidden = true;
     setKvChartTitle();
-    setSliderDisabled();
   }
 
   // ─── Hugging Face import ─────────────────────────────────────────────────────
@@ -1106,6 +1336,19 @@
     compute();
   }
 
+  /** Select an MTP draft KV cache type: update the selection and recompute. */
+  function selectMtpKvType(id) {
+    selectedMtpKvType = id;
+    compute();
+  }
+
+  /** Select an MTP draft (K, V) pair for asymmetric mode: update the selection and recompute. */
+  function selectMtpKvPair(kId, vId) {
+    selectedMtpKType = kId;
+    selectedMtpVType = vId;
+    compute();
+  }
+
   /** Main entry point: search for GGUF repos, fetch specs + variants, populate dropdowns.
    * `restore` (optional) carries the pre-filled values from a ?s= share link so the
    * import can re-apply the shared quant / runtime / KV selection after its defaults. */
@@ -1168,6 +1411,13 @@
               el.asymToggle.checked = true;
               if (restore.k) selectedKType = restore.k;
               if (restore.v) selectedVType = restore.v;
+            }
+            if (restore.mtpkv) selectedMtpKvType = restore.mtpkv;
+            if (restore.mtpasym) {
+              mtpAsymmetricMode = true;
+              el.mtpAsymToggle.checked = true;
+              if (restore.mtpk) selectedMtpKType = restore.mtpk;
+              if (restore.mtpv) selectedMtpVType = restore.mtpv;
             }
           }
 
@@ -1247,8 +1497,6 @@
       node.addEventListener('blur', function () { formatDecimal(node); });
     });
 
-    el.ctxSlider.addEventListener('input', updateReadout);
-
     el.hfImportBtn.addEventListener('click', function () { fetchGgufVariants(); });
     el.hfId.addEventListener('keydown', function (e) {
       if (e.key === 'Enter') fetchGgufVariants();
@@ -1296,7 +1544,7 @@
     });
 
     // Speech-bubble tooltips (300ms hide delay): VRAM bar segments + help circles
-    [el.segDesktop, el.segRuntime, el.segWeights, el.segMTP, el.segKV, el.segFree].forEach(function (s) {
+    [el.segDesktop, el.segRuntime, el.segWeights, el.segKV, el.segMTP, el.segMtpKV].forEach(function (s) {
       s.addEventListener('mouseenter', function () {
         cancelHide();
         if (s.dataset.name) showTip(vramSegTipHtml(s), s);
@@ -1384,6 +1632,33 @@
       compute();
     });
 
+    // Generate the MTP draft cache-size buttons
+    KV_CACHE_TYPES.forEach(function (t) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'mtp-kv-size-btn kv-size-btn kv-size-btn-active';
+      btn.textContent = t.id;
+      btn.dataset.id = t.id;
+      btn.setAttribute('aria-pressed', 'true');
+      btn.addEventListener('click', function () {
+        var active = btn.classList.contains('kv-size-btn-active');
+        btn.classList.toggle('kv-size-btn-active', !active);
+        btn.setAttribute('aria-pressed', String(!active));
+        compute();
+      });
+      el.mtpKvCheckSizes.appendChild(btn);
+    });
+
+    el.mtpAsymToggle.addEventListener('change', function () {
+      mtpAsymmetricMode = el.mtpAsymToggle.checked;
+      if (!mtpAsymmetricMode) {
+        var mtpKType = getMtpKType();
+        var mtpVType = getMtpVType();
+        selectedMtpKvType = mtpKType.bytesPerElem >= mtpVType.bytesPerElem ? mtpKType.id : mtpVType.id;
+      }
+      compute();
+    });
+
     // Format initial values to ensure decimal places
     [el.vram, el.runtime, el.desktop].forEach(formatDecimal);
 
@@ -1393,6 +1668,7 @@
     // the checkbox is the user-facing source of truth (a browser may
     // restore it to checked after a reload).
     asymmetricMode = el.asymToggle.checked;
+    mtpAsymmetricMode = el.mtpAsymToggle.checked;
 
     // If opened with a ?s= share link, restore the pre-filled values
     // (and auto-import the model). If an async import was kicked off,

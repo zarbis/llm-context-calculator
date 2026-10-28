@@ -10,12 +10,12 @@ Open `index.html` in a browser — that's it. No build, no dependencies; it work
 
 1. Pick your GPU — VRAM and bandwidth auto-fill (both remain editable).
 2. Import a model from [Hugging Face](https://huggingface.co) (e.g. `Qwen3-4B-GGUF`). Its GGUF quant variants populate the dropdowns, and the largest quant that fits in your VRAM is auto-selected.
-3. Read the results — max context, KV cache cost per 1K tokens, decode speed — and drag the slider to pick a context size with a headroom margin.
+3. Read the results — max context, KV cache cost per 1K tokens, decode speed.
 
 ## How it works
 
 - **Weights**: the size of the selected GGUF file. MTP variants are separate models (base + MTP head).
-- **KV cache**: `2 × layers × KV heads × head dim × bytes-per-element` per token. The chart compares llama.cpp KV cache types (`--cache-type-k` / `--cache-type-v`), including asymmetric K/V pairs.
+- **KV cache**: `2 × layers × KV heads × head dim × bytes-per-element` per token. The "KV cache types" card compares llama.cpp KV cache types (`--cache-type-k` / `--cache-type-v`), including asymmetric K/V pairs; for MTP variants it shows a main × draft spreadsheet of max-context counts.
 - **Max context** = remaining VRAM ÷ KV bytes per token.
 - **Decode speed** ≈ bandwidth ÷ bytes read per token (MTP-aware).
 
@@ -23,10 +23,9 @@ Open `index.html` in a browser — that's it. No build, no dependencies; it work
 
 - GPU presets (NVIDIA / AMD / Intel) with VRAM + bandwidth auto-fill
 - HF import with gated-model token support
-- MTP variants handled as separate models
+- MTP variants handled as separate models (main × draft KV spreadsheet)
 - Asymmetric K/V cache mode
 - VRAM allocation bar with per-segment tooltips
-- Context slider with live headroom readout
 - `nvidia-smi` helpers with copy-to-clipboard
 
 ## Notes
